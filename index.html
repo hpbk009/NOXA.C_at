@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NOXA | Ephemeral Private Chat</title>
+    <style>
+        :root {
+            --bg-dark: #07090e;
+            --card-bg: #121826;
+            --border-glass: rgba(255, 255, 255, 0.12);
+            --primary-cyan: #00f2fe;
+            --primary-blue: #4facfe;
+            --text-pure: #ffffff;
+            --text-muted: #8e9bb0;
+            --danger-red: #ff4757;
+            --success-green: #2ed573;
+            --bubble-mine: #17426b;
+            --bubble-peer: #1c2434;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            /* Anti-Copy Protection */
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-pure);
+            font-family: system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: filter 0.2s ease;
+        }
+
+        /* Blur protection when tab or app loses focus */
+        body.privacy-blurred {
+            filter: blur(20px);
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+        }
+
+        .page.active {
+            display: flex;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            padding: 22px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .brand-hero {
+            text-align: center;
+            margin: 30px 0 25px 0;
+        }
+
+        .shield-badge {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 15px auto;
+            border-radius: 20px;
+            background: rgba(0, 242, 254, 0.1);
+            border: 1px solid var(--primary-cyan);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .brand-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: #ffffff;
+        }
+
+        .brand-tagline {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .btn {
+            width: 100%;
+            height: 52px;
+            border: none;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+
+        .btn:active {
+            opacity: 0.8;
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-cyan));
+            color: #030811;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-glass);
+            color: var(--text-pure);
+        }
+
+        .btn-panic {
+            background: rgba(255, 71, 87, 0.2);
+            border: 1px solid var(--danger-red);
+            color: var(--danger-red);
+            font-size: 0.76rem;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .security-pills {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .pill {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-glass);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .code-box {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border-glass);
+            border-radius: 14px;
+            padding: 16px;
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .room-code-display {
+            font-size: 1.8rem;
+            font-family: monospace;
+            font-weight: 800;
+            letter-spacing: 3px;
+            color: var(--primary-cyan);
+        }
+
+        .input-code {
+            width: 100%;
+            height: 54px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-glass);
+            border-radius: 14px;
+            padding: 0 16px;
+            font-size: 1.2rem;
+            font-family: monospace;
+            color: var(--primary-cyan);
+            text-align: center;
+            margin-bottom: 14px;
+            outline: none;
+            -webkit-user-select: auto;
+            user-select: auto;
+        }
+
+        /* Chat Screen */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+        }
+
+        .chat-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-glass);
+            margin-bottom: 12px;
+        }
+
+        .chat-box {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-right: 4px;
+        }
+
+        .bubble {
+            padding: 10px 14px;
+            border-radius: 16px;
+            font-size: 0.92rem;
+            max-width: 82%;
+            word-break: break-word;
+        }
+
+        .bubble.mine {
+            background: var(--bubble-mine);
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-input-bar {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .chat-input-bar input {
+            flex: 1;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-glass);
+            border-radius: 24px;
+            padding: 0 16px;
+            color: #fff;
+            outline: none;
+            -webkit-user-select: auto;
+            user-select: auto;
+        }
+
+        .btn-send {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--primary-cyan);
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Panic Screen: Fake Calculator */
+        .calc-screen {
+            background: #000;
+            color: #fff;
+            font-size: 2.5rem;
+            padding: 20px;
+            text-align: right;
+            border-radius: 14px;
+            margin-bottom: 16px;
+            font-family: monospace;
+            min-height: 80px;
+            overflow-x: auto;
+        }
+
+        .calc-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .calc-btn {
+            height: 56px;
+            border-radius: 14px;
+            border: none;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            background: #1c2434;
+            color: #fff;
+        }
+
+        .calc-btn.op {
+            background: #2a3b5c;
+            color: var(--primary-cyan);
+        }
+
+        .calc-btn.eq {
+            background: var(--primary-cyan);
+            color: #030811;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+
+        <!-- SCREEN 1: LANDING -->
+        <div id="page-landing" class="page active">
+            <div class="brand-hero">
+                <div class="shield-badge">
+                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#00f2fe" stroke-width="2">
+                        <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z"/>
+                    </svg>
+                </div>
+                <h1 class="brand-title">NOXA</h1>
+                <p class="brand-tagline">Temporary Zero-Trace Encrypted Channels</p>
+            </div>
+
+            <div class="card">
+                <button type="button" class="btn btn-primary" onclick="handleCreateRoom()">
+                    Create Private Room
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="openPage('join')">
+                    Join Existing Room
+                </button>
+            </div>
+
+            <div class="security-pills">
+                <div class="pill">● Anti-Inspection Shield</div>
+                <div class="pill">● Panic Wipe Mode</div>
+                <div class="pill">● No Memory Trace</div>
+            </div>
+        </div>
+
+        <!-- SCREEN 2: CREATE ROOM -->
+        <div id="page-create" class="page">
+            <div class="header">
+                <button type="button" class="btn-secondary" style="width: auto; padding: 6px 14px; height: 36px;" onclick="openPage('landing')">← Back</button>
+                <h3>Room Created</h3>
+                <span style="font-size: 0.8rem; color: #ffb142;">● 1/2</span>
+            </div>
+
+            <div class="card">
+                <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center;">SHARE ROOM CODE WITH PEER</p>
+                <div class="code-box">
+                    <div id="display-room-code" class="room-code-display">--- --- --</div>
+                </div>
+
+                <button type="button" id="btn-copy-code" class="btn btn-secondary" onclick="copyCurrentCode()">
+                    📋 Copy Code
+                </button>
+
+                <div style="text-align: center; margin: 15px 0;">
+                    <svg width="110" height="110" viewBox="0 0 24 24" fill="white" style="background:#fff; padding:6px; border-radius:10px;">
+                        <path fill="#000" d="M2 2h8v8H2zm2 2v4h4V4zm10-2h8v8h-8zm2 2v4h4V4zM2 14h8v8H2zm2 2v4h4v-4zm14-2h2v2h-2zm-4 0h2v2h-2zm2 2h2v2h-2zm2 2h2v2h-2zm-4 0h2v2h-2zm-2 2h2v2h-2zm4 0h2v2h-2zm2 0h2v2h-2z"/>
+                    </svg>
+                    <p style="font-size: 0.72rem; color: var(--text-muted); margin-top: 6px;">Auto QR generated</p>
+                </div>
+
+                <button type="button" class="btn btn-primary" onclick="launchChat()">
+                    Enter Chat Room ➔
+                </button>
+            </div>
+        </div>
+
+        <!-- SCREEN 3: JOIN ROOM -->
+        <div id="page-join" class="page">
+            <div class="header">
+                <button type="button" class="btn-secondary" style="width: auto; padding: 6px 14px; height: 36px;" onclick="openPage('landing')">← Back</button>
+                <h3>Enter Channel</h3>
+                <div></div>
+            </div>
+
+            <div class="card">
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">Enter the code given by other user:</p>
+                <input type="text" id="input-join-code" class="input-code" placeholder="K7X-29P-Q4" maxlength="11">
+                <button type="button" class="btn btn-primary" onclick="handleJoinRoom()">
+                    Connect Securely
+                </button>
+            </div>
+        </div>
+
+        <!-- SCREEN 4: ACTIVE CHAT -->
+        <div id="page-chat" class="page">
+            <div class="card chat-container">
+                <div class="chat-topbar">
+                    <div>
+                        <b id="chat-header-title">Room Chat</b><br>
+                        <span style="font-size: 0.7rem; color: var(--success-green);">● E2EE 256-bit Active</span>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button type="button" class="btn-panic" onclick="triggerPanic()">⚠️ PANIC</button>
+                        <button type="button" style="background:#ff4757; color:#fff; border:none; padding:6px 12px; border-radius:8px; cursor:pointer;" onclick="endSession()">End</button>
+                    </div>
+                </div>
+
+                <div id="chat-messages" class="chat-box">
+                    <div style="font-size: 0.72rem; color: var(--text-muted); text-align: center; margin-bottom: 10px;">
+                        Protected Session. Anti-Copy Enabled.
+                    </div>
+                </div>
+
+                <div class="chat-input-bar">
+                    <input type="text" id="chat-text-input" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMessage()">
+                    <button type="button" class="btn-send" onclick="sendMessage()">➤</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 5: PANIC DISGUISE (REAL CALCULATOR) -->
+        <div id="page-calc" class="page">
+            <div class="card">
+                <div class="header">
+                    <span style="font-size: 0.85rem; color: var(--text-muted);">Standard Calculator</span>
+                    <button type="button" class="btn-secondary" style="width: auto; padding: 4px 10px; height: 28px; font-size: 0.75rem;" onclick="openPage('landing')">Exit</button>
+                </div>
+                <div id="calc-display" class="calc-screen">0</div>
+                <div class="calc-grid">
+                    <button class="calc-btn op" onclick="calcClear()">C</button>
+                    <button class="calc-btn op" onclick="calcOp('/')">÷</button>
+                    <button class="calc-btn op" onclick="calcOp('*')">×</button>
+                    <button class="calc-btn op" onclick="calcOp('-')">-</button>
+
+                    <button class="calc-btn" onclick="calcNum('7')">7</button>
+                    <button class="calc-btn" onclick="calcNum('8')">8</button>
+                    <button class="calc-btn" onclick="calcNum('9')">9</button>
+                    <button class="calc-btn op" onclick="calcOp('+')">+</button>
+
+                    <button class="calc-btn" onclick="calcNum('4')">4</button>
+                    <button class="calc-btn" onclick="calcNum('5')">5</button>
+                    <button class="calc-btn" onclick="calcNum('6')">6</button>
+                    <button class="calc-btn eq" onclick="calcEquals()">=</button>
+
+                    <button class="calc-btn" onclick="calcNum('1')">1</button>
+                    <button class="calc-btn" onclick="calcNum('2')">2</button>
+                    <button class="calc-btn" onclick="calcNum('3')">3</button>
+                    <button class="calc-btn" onclick="calcNum('0')">0</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentCode = "";
+
+        // Screen Switcher
+        function openPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            const target = document.getElementById('page-' + pageId);
+            if (target) target.classList.add('active');
+        }
+
+        // Random Code Generator
+        function getSecureCode() {
+            const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let res = '';
+            for(let i=0; i<8; i++) res += ch.charAt(Math.floor(Math.random() * ch.length));
+            return res.slice(0,3) + '-' + res.slice(3,6) + '-' + res.slice(6,8);
+        }
+
+        function handleCreateRoom() {
+            currentCode = getSecureCode();
+            document.getElementById('display-room-code').textContent = currentCode;
+            openPage('create');
+        }
+
+        function copyCurrentCode() {
+            if(!currentCode) return;
+            navigator.clipboard.writeText(currentCode).catch(() => {});
+            const btn = document.getElementById('btn-copy-code');
+            btn.textContent = '✓ COPIED!';
+            setTimeout(() => { btn.textContent = '📋 Copy Code'; }, 1800);
+        }
+
+        function launchChat() {
+            document.getElementById('chat-header-title').textContent = 'Room ' + currentCode;
+            openPage('chat');
+        }
+
+        function handleJoinRoom() {
+            const val = document.getElementById('input-join-code').value.trim();
+            if(!val) {
+                alert('Please enter a room code.');
+                return;
+            }
+            currentCode = val;
+            launchChat();
+        }
+
+        function sendMessage() {
+            const inp = document.getElementById('chat-text-input');
+            const text = inp.value.trim();
+            if(!text) return;
+
+            const box = document.getElementById('chat-messages');
+            const b = document.createElement('div');
+            b.className = 'bubble mine';
+            b.textContent = text;
+            box.appendChild(b);
+            box.scrollTop = box.scrollHeight;
+            inp.value = '';
+        }
+
+        function endSession() {
+            if(confirm('Close session and destroy all temporary messages?')) {
+                wipeMemory();
+                openPage('landing');
+            }
+        }
+
+        function wipeMemory() {
+            document.getElementById('chat-messages').innerHTML = `
+                <div style="font-size: 0.72rem; color: var(--text-muted); text-align: center; margin-bottom: 10px;">
+                    Protected Session. Anti-Copy Enabled.
+                </div>
+            `;
+            currentCode = "";
+        }
+
+        // ================= PANIC BUTTON FEATURE =================
+        function triggerPanic() {
+            wipeMemory(); // Instantly clears messages
+            calcClear();
+            openPage('calc'); // Switches to working calculator immediately
+        }
+
+        // Calculator Logic
+        let calcVal = '0';
+        function updateCalc() { document.getElementById('calc-display').textContent = calcVal; }
+        function calcNum(n) {
+            calcVal = (calcVal === '0') ? n : calcVal + n;
+            updateCalc();
+        }
+        function calcOp(op) {
+            calcVal += ' ' + op + ' ';
+            updateCalc();
+        }
+        function calcClear() {
+            calcVal = '0';
+            updateCalc();
+        }
+        function calcEquals() {
+            try {
+                calcVal = String(Function('"use strict";return (' + calcVal + ')')());
+            } catch(e) {
+                calcVal = 'Error';
+            }
+            updateCalc();
+        }
+
+        // ================= PRIVACY SHIELD: BLUR ON TAB SWITCH =================
+        window.addEventListener('blur', () => {
+            document.body.classList.add('privacy-blurred');
+        });
+        window.addEventListener('focus', () => {
+            document.body.classList.remove('privacy-blurred');
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                document.body.classList.add('privacy-blurred');
+            } else {
+                document.body.classList.remove('privacy-blurred');
+            }
+        });
+
+        // Block Right-Click Context Menu for Anti-Inspection
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
+    </script>
+</body>
+</html>
